@@ -1,4 +1,4 @@
-package main // import "git.ronmi.tw/raoh/prpr"
+package main // import "github.com/raohwork/prpr"
 
 import (
 	"log"

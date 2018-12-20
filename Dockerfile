@@ -6,9 +6,9 @@ RUN apt-get update \
  && apt-get clean -y \
  && rm -fr /var/lib/apt/lists/*
 
-ADD *.go /go/src/prpr/
+ADD *.go /go/src/github.com/raohwork/prpr/
 
-WORKDIR /go/src/prpr
-RUN go get -v && go install prpr
+WORKDIR /go/src/github.com/raohwork/prpr
+RUN go get -v && go install github.com/raohwork/prpr
 
 CMD /go/bin/prpr
