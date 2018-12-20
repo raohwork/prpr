@@ -10,7 +10,7 @@ import (
 	mario "github.com/njasm/marionette_client"
 )
 
-const getContentF = `return document.querySelector('html').innerHTML;`
+const getContentF = `return document.querySelector('html').outerHTML;`
 
 type resp struct {
 	Value string `json:"value"`
@@ -53,7 +53,7 @@ func (h *Handler) Grab(uri, wait string) (ret string, err error) {
 		return
 	}
 
-	r, err := h.client.ExecuteScript(getContentF, nil, 1000, false)
+	r, err := h.client.ExecuteScript(getContentF, []interface{}{1}, 1000, false)
 	if err != nil {
 		return
 	}
@@ -63,7 +63,7 @@ func (h *Handler) Grab(uri, wait string) (ret string, err error) {
 		return
 	}
 
-	ret = "<html>" + data.Value + "</html>"
+	ret = data.Value
 	return
 }
 
