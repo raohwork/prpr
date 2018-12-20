@@ -1,12 +1,14 @@
 FROM golang
 MAINTAINER ronmi.ren@gmail.com
 
-RUN apt-get update \
- && apt-get install -y firefox-esr \
+RUN echo 'deb http://deb.debian.org/debian unstable main' > /etc/apt/sources.list.d/firefox.list \
+ && apt-get update \
+ && apt-get install -t unstable -y firefox \
  && apt-get clean -y \
- && rm -fr /var/lib/apt/lists/*
+ && rm -fr /etc/apt/sources.list.d/firefox.list /var/lib/apt/lists/*
 
 ADD *.go /go/src/github.com/raohwork/prpr/
+ADD .mozilla /root/.mozilla
 
 WORKDIR /go/src/github.com/raohwork/prpr
 RUN go get -v && go install github.com/raohwork/prpr
