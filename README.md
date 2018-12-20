@@ -29,6 +29,8 @@ It returns HTML code if success, 400 if shared secret mismatch and 500 when fail
 * To keep code simple, prpr just waits 10 seconds before actually connect to firefox. IT DOES NOT SUPPORT RECONNECTING.
 * For best security, DO NOT EXPOSE IT TO PUBLIC NETWORK.
 
+**MAKE SURE YOU KNOW WHAT YOU ARE FETCHING!**
+
 # License
 
 WTFPL
