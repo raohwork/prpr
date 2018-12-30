@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # configurations
-CURL=curl # Set this to curl binary path, empty string to disable curl
-WGET=wget # Set this to wget binary path, empty string to disable wget
-          # One of CURL and WGET must be set. CURL is used if both are set.
+#
+# Set CURL to curl binary path, empty string to disable curl
+# Set WGET to wget binary path, empty string to disable wget
+# One of CURL and WGET must be set. CURL is used if both are set.
 
 remote="http://localhost:9801"
 if [[ $SERVER != "" ]]
@@ -84,6 +85,26 @@ if [[ $1 == "" || $2 == "" ]]
 then
     help "$0"
     exit 1
+fi
+
+# validate configurations
+if [[ $CURL == "" && $WGET == "" ]]
+then
+    # invalid, try auto detect
+    which curl > /dev/null 2>& 1
+    if [[ $? == 0 ]]
+    then
+	CURL=curl
+    else
+	which wget > /dev/null 2>&1
+	if [[ $? == 0 ]]
+	then
+	    WGET=wget
+	else
+	    echo 'None of CURL and WGET is set, and we cannot determine path to any of it.'
+	    exit 1
+	fi
+    fi
 fi
 
 if [[ $CURL == "" ]]
