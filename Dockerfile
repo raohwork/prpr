@@ -1,16 +1,17 @@
-FROM golang
+FROM golang AS builder
 MAINTAINER ronmi.ren@gmail.com
 
-RUN echo 'deb http://deb.debian.org/debian unstable main' > /etc/apt/sources.list.d/firefox.list \
- && apt-get update \
- && apt-get install -t unstable -y firefox \
+ADD *.go go.mod go.sum /prpr/
+WORKDIR /prpr
+RUN go mod download && go build -v
+
+FROM debian:unstable-slim
+RUN apt-get update \
+ && apt-get install --no-install-recommends -y firefox ca-certificates \
  && apt-get clean -y \
- && rm -fr /etc/apt/sources.list.d/firefox.list /var/lib/apt/lists/*
+ && rm -fr /var/lib/apt/lists/*
 
-ADD *.go /go/src/github.com/raohwork/prpr/
 ADD .mozilla /root/.mozilla
+COPY --from=builder /prpr/prpr /usr/local/bin/
 
-WORKDIR /go/src/github.com/raohwork/prpr
-RUN go get -v && go install github.com/raohwork/prpr
-
-CMD /go/bin/prpr
+CMD /usr/local/bin/prpr

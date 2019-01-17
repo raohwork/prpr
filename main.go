@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 )
 
@@ -45,7 +46,12 @@ func runFX(firefox string, ch chan error) {
 }
 
 func runWeb(bind, secret string, ch chan error) {
-	h := New("", 0)
+	maxStr := os.Getenv("QUEUE_SIZE")
+	max, err := strconv.Atoi(maxStr)
+	if err != nil || max < 1 {
+		max = 1
+	}
+	h := New("", 0, max)
 	if secret != "" {
 		h.Secret = secret
 	}
