@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -33,11 +34,25 @@ func main() {
 
 func runFX(firefox string, ch chan error) {
 	// starting firefox
+	opts := []string{
+		"--marionette",
+		"--safe-mode",
+	}
+	if os.Getenv("DEBUG_FIREFOX") == "" {
+		opts = append(opts, "--headless")
+	}
+	if x := os.Getenv("FIREFOX_OPTS"); x != "" {
+		xarr := strings.Split(x, " ")
+		for _, item := range xarr {
+			item = strings.TrimSpace(item)
+			if item == "" {
+				continue
+			}
+			opts = append(opts, item)
+		}
+	}
 	cmd := exec.Command(
 		firefox,
-		"--marionette",
-		"--headless",
-		"--safe-mode",
 	)
 
 	cmd.Stdout = os.Stdout

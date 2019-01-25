@@ -8,8 +8,12 @@ Prpr accepts following environmental variables:
 
 - `SECRET`: shared secret. Default to `""` which disables authenticating.
 - `FIREFOX`: path to Firefox binary. Default to `"firefox"`.
+- `DEBUG_FIREFOX`: disable `--headless` mode.
+- `FIREFOX_OPTS`: extra command line arguments passed to Firefox.
 - `BIND`: binding address passed to `ListenAndServe`. Default to `":9801"`.
 - `QUEUE_SIZE`: max concurrent loading pages. Default to `1`.
+
+It always passes `--marionette` and `--safe-mode` to Firefox.
 
 # How it fetches HTML
 
