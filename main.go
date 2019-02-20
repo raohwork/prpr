@@ -53,6 +53,7 @@ func runFX(firefox string, ch chan error) {
 	}
 	cmd := exec.Command(
 		firefox,
+		opts...,
 	)
 
 	cmd.Stdout = os.Stdout

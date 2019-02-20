@@ -1,13 +1,13 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
+	"fmt"
 	"log"
 	"net/http"
-	"time"
+	"strconv"
 
-	mario "github.com/njasm/marionette_client"
+	"github.com/raohwork/marionette-go/automata"
+	"github.com/raohwork/marionette-go/shirogane"
 )
 
 const getContentF = `return document.querySelector('html').outerHTML;`
@@ -17,138 +17,76 @@ type resp struct {
 }
 
 type Handler struct {
-	client  *mario.Client
-	windows chan string
-	token   chan byte
-	Secret  string
+	client *automata.Columbine
+	tabs   chan string
+	Secret string
 }
 
 func New(server string, port, max int) (ret *Handler) {
-	c := mario.NewClient()
-	if err := c.Connect(server, port); err != nil {
-		log.Fatalf("cannot connect to firefox: %s", err)
+	if max < 1 {
+		max = 1
 	}
-	if _, err := c.NewSession("", nil); err != nil {
+	if server == "" {
+		server = "127.0.0.1"
+	}
+	if port < 1 {
+		port = 2828
+	}
+
+	c := &shirogane.Mixed{Addr: fmt.Sprintf("%s:%d", server, port)}
+	if err := c.Start(); err != nil {
+		log.Fatalf("cannot start marionette: %s", err)
+	}
+	cl := &shirogane.Ashihana{Kuroga: c}
+	if _, _, err := cl.NewSession(); err != nil {
 		log.Fatalf("cannot create new session: %s", err)
 	}
 
-	// fetch current opening windows
-	ws, err := c.WindowHandles()
+	tabNames := make([]string, max)
+	ch := make(chan string, max)
+	for x := 1; x <= max; x++ {
+		name := "tab" + strconv.Itoa(x)
+		tabNames[x-1] = name
+		ch <- name
+	}
+	b, err := automata.NewColumbine(c, tabNames)
 	if err != nil {
-		log.Fatalf("cannot fetch info of currently opened windows: %s", err)
-	}
-
-	// create windows
-	for l := len(ws); l < max; l++ {
-		_, err = c.ExecuteScript(`window.open('about:blank')`, []interface{}{1}, 1000, false)
-		if err != nil {
-			log.Fatalf("cannot open new window: %s", err)
-		}
-	}
-	// close windows
-	for l := len(ws); l > max; l-- {
-		if err = c.SwitchToWindow(ws[l-1]); err != nil {
-			log.Fatalf("cannot switch to window %s: %s", ws[l-1], err)
-		}
-		if _, err = c.CloseWindow(); err != nil {
-			log.Fatalf("cannot close windows %s: %s", ws[l-1], err)
-		}
-	}
-
-	// fetch again
-	if ws, err = c.WindowHandles(); err != nil {
-		log.Fatalf("cannot fetch info of currently opened windows: %s", err)
+		log.Fatalf("cannot init Columbine: %s", err)
 	}
 
 	ret = &Handler{
-		client:  c,
-		windows: make(chan string, max),
-		token:   make(chan byte, 1),
+		client: b,
+		tabs:   ch,
 	}
-	for _, w := range ws {
-		ret.windows <- w
-	}
-	ret.token <- 0
 
 	return
 }
 
-func (h *Handler) allocate(w string) (err error) {
-	<-h.token
-	return h.client.SwitchToWindow(w)
+func (h *Handler) allocate() (ret *automata.Tab) {
+	str := <-h.tabs
+	return h.client.GetTab(str)
 }
 
-func (h *Handler) release(w string) {
-	h.token <- 0
+func (h *Handler) release(tab *automata.Tab) {
+	h.tabs <- tab.GetName()
 }
 
 func (h *Handler) Grab(uri, wait string) (ret string, err error) {
 	// allocate a window
-	w := <-h.windows
-	defer func() {
-		h.windows <- w
-		h.token <- 0
-	}()
+	tab := h.allocate()
+	defer h.release(tab)
 
-	// get token
-	if err = h.allocate(w); err != nil {
+	ch := tab.NavigateAsync(uri)
+	if err = <-ch; err != nil {
+		return
+	}
+	defer tab.Navigate("about:blank")
+
+	if _, err = tab.WaitFor(wait, 10); err != nil {
 		return
 	}
 
-	if _, err = h.client.Navigate(uri); err != nil {
-		return
-	}
-
-	// release token and wait 1 second for page loaing
-	h.release(w)
-	time.Sleep(1 * time.Second)
-
-	// check 10 times, wait 1 second between each check
-	ok := false
-	for x := 0; x < 10; x++ {
-		if err = h.allocate(w); err != nil {
-			return
-		}
-		we, e := h.client.FindElement(
-			mario.CSS_SELECTOR,
-			wait,
-		)
-		if e != nil {
-			err = e
-			h.client.Navigate("about:blank")
-			return
-		}
-		h.release(w)
-		if we != nil {
-			ok = true
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
-
-	if err = h.allocate(w); err != nil {
-		return
-	}
-	if !ok {
-		err = errors.New("timed out")
-		h.client.Navigate("about:blank")
-		return
-	}
-
-	r, err := h.client.ExecuteScript(getContentF, []interface{}{1}, 1000, false)
-	if err != nil {
-		h.client.Navigate("about:blank")
-		return
-	}
-
-	var data resp
-	if err = json.Unmarshal([]byte(r.Value), &data); err != nil {
-		h.client.Navigate("about:blank")
-		return
-	}
-
-	ret = data.Value
-	h.client.Navigate("about:blank")
+	err = tab.ExecuteScript(string(getContentF), &ret)
 	return
 }
 
