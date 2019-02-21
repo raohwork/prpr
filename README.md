@@ -15,6 +15,21 @@ Prpr accepts following environmental variables:
 
 It always passes `--marionette` and `--safe-mode` to Firefox.
 
+### Extra configuration for Docker
+
+The docker image `ronmi/prpr` will create new profile directory in /tmp each run,
+which might waste disk space if you start/stop it frequently.
+
+You can mount a volume somewhere and pass it in envvar `FIREFOX_PROFILE`
+
+```sh
+docker run -d --name prpr \
+  -v "$(pwd)/data:/fxprofile" \
+  -e "FIREFOX_PROFILE=/fxprofile" \
+  -p "127.0.0.1:9801:9801" \
+  ronmi/prpr
+```
+
 # How it fetches HTML
 
 1. Allocate a free browser window (blocked if none free)
