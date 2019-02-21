@@ -11,7 +11,7 @@ RUN apt-get update \
  && apt-get clean -y \
  && rm -fr /var/lib/apt/lists/*
 
-ADD .mozilla /root/.mozilla
+ADD .mozilla /profile_tmpl
 COPY --from=builder /prpr/prpr /usr/local/bin/
 
 CMD /usr/local/bin/prpr
