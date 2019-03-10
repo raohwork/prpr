@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/raohwork/marionette-go/automata"
-	"github.com/raohwork/marionette-go/shirogane"
+	"github.com/raohwork/marionette-go/mnclient"
+	"github.com/raohwork/marionette-go/mnsender"
+	"github.com/raohwork/marionette-go/tabmgr"
 )
 
 const getContentF = `return document.querySelector('html').outerHTML;`
@@ -17,7 +18,7 @@ type resp struct {
 }
 
 type Handler struct {
-	client *automata.Columbine
+	client *tabmgr.TabManager
 	tabs   chan string
 	Secret string
 }
@@ -33,12 +34,15 @@ func New(server string, port, max int) (ret *Handler) {
 		port = 2828
 	}
 
-	c := &shirogane.Mixed{Addr: fmt.Sprintf("%s:%d", server, port)}
-	if err := c.Start(); err != nil {
+	c, err := mnsender.NewTCPSender(fmt.Sprintf("%s:%d", server, port), 0)
+	if err != nil {
+		log.Fatalf("cannot connect to marionette server: %s", err)
+	}
+	if err = c.Start(); err != nil {
 		log.Fatalf("cannot start marionette: %s", err)
 	}
-	cl := &shirogane.Ashihana{Kuroga: c}
-	if _, _, err := cl.NewSession(); err != nil {
+	cl := &mnclient.Commander{Sender: c}
+	if _, _, err = cl.NewSession(); err != nil {
 		log.Fatalf("cannot create new session: %s", err)
 	}
 
@@ -49,25 +53,26 @@ func New(server string, port, max int) (ret *Handler) {
 		tabNames[x-1] = name
 		ch <- name
 	}
-	b, err := automata.NewColumbine(c, tabNames)
+
+	tm, err := tabmgr.New(c, tabNames)
 	if err != nil {
-		log.Fatalf("cannot init Columbine: %s", err)
+		log.Fatalf("cannot init TabManager: %s", err)
 	}
 
 	ret = &Handler{
-		client: b,
+		client: tm,
 		tabs:   ch,
 	}
 
 	return
 }
 
-func (h *Handler) allocate() (ret *automata.Tab) {
+func (h *Handler) allocate() (ret *tabmgr.Tab) {
 	str := <-h.tabs
 	return h.client.GetTab(str)
 }
 
-func (h *Handler) release(tab *automata.Tab) {
+func (h *Handler) release(tab *tabmgr.Tab) {
 	h.tabs <- tab.GetName()
 }
 
