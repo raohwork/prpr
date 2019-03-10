@@ -7,4 +7,7 @@ then
     export FIREFOX_OPTS="${FIREFOX_OPTS} --profile ${profile_dir}"
 fi
 
+X="${FIREFOX:=/firefox/firefox}"
+export FIREFOX="$X"
+
 exec /usr/local/bin/prpr
