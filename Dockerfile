@@ -20,7 +20,7 @@ RUN wget -q -O - 'https://download.mozilla.org/?product=firefox-latest-ssl&os=li
 
 FROM debian:stable-slim
 RUN apt-get update \
- && apt-get upgrade \
+ && apt-get upgrade -y \
  && apt-cache depends firefox-esr | grep Depends | cut -d ':' -f 2 \
   | xargs apt-get install -y --no-install-recommends ca-certificates \
  && apt-get clean -y \
